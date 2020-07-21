@@ -9,12 +9,12 @@
 #define VISIONH 70.0/4
 #define DISTANCIA 4
 #define HEIGHT 56
-#define WIDTH 32
+#define WIDTH 128
 #define VELOCIDAD 5
 #define VELOCIDADGIRO 20
 
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
-const int piedras[] PROGMEM = {
+int piedras[] = {
   0b0000100000010000,
   0b0001100000010000,
   0b0011100001111000,
@@ -32,7 +32,10 @@ const int piedras[] PROGMEM = {
   0b0111100000110000,
   0b0100000000110000
 };
-const int mapa[] PROGMEM = {
+
+int mapa2[] {0, 0, 0, 0, 0, 0, 0, 0};
+
+int mapa[] = {
   0b11111111,
   0b10000001,
   0b11000111,
@@ -64,38 +67,38 @@ struct Rayo {
     }
     dirY = (angulo > 180) ? -1 : 1;
     dirX = (angulo > 90 && angulo < 270) ? -1 : 1;
-    angulo = angulo * RAD_TO_DEG;
+    angulo = 31416 * angulo / 1800000;
     seno = sin(angulo);
     coseno = cos(angulo);
     tangente = tan(angulo);
   }
 
   float getYFromLargo(float largo) {
-    return pposy + seno * largo;
+    return pPosY + seno * largo;
   }
 
   float getXFromLargo(float largo) {
-    return pposx + coseno * largo;
+    return pPosX + coseno * largo;
   }
 
   float getYFromX(float x) {
-    x -= pposx;
-    return pposy + tangente * x;
+    x -= pPosX;
+    return pPosY + tangente * x;
   }
 
   float getXFromY(float y) {
     if (tangente == 0) {
       return 255;
     }
-    y -= pposy;
-    return pposx + y / tangente;
+    y -= pPosY;
+    return pPosX + y / tangente;
   }
 
   float getLargoFromY(float y) {
     if (seno == 0) {
       return 255;
     }
-    y -= pposy;
+    y -= pPosY;
     return y / seno;
   }
 
@@ -103,7 +106,7 @@ struct Rayo {
     if (coseno == 0) {
       return 255;
     }
-    x -= pposx;
+    x -= pPosX;
     return x / coseno;
   }
 };
@@ -117,13 +120,24 @@ boolean hayPared(int x, int y) {
   return  ((mapa[7 - y] >> (7 - x)) & 1) == 1;
 }
 
-int readjoy(byte pin, byte maximo) {
-  return map(analogRead(pin), 0, 1000, -maximo, maximo);
+boolean getPiedra(int x, int y) {
+  if (x > 15 || y > 15 || x < 0 || y < 0) {
+    return false;
+  }
+  return  ((piedras[y] >> (15 - x)) & 1) == 0;
 }
 
-float shoyRayX(rayo) {
+int readjoy(byte pin, int maximo) {
+  int input = analogRead(pin);
+  if (input > 490 && input < 520) {
+    input = 512;
+  }
+  return map(input, 0, 1023, -maximo, maximo);
+}
+
+float shotRayX(Rayo rayo) {
   float largo = 0;
-  float x = rayo.pPosX;
+  float x = (int)rayo.pPosX;
   float y = 0;
   int i = 0;
   int direccion = rayo.dirX;
@@ -136,15 +150,15 @@ float shoyRayX(rayo) {
     x += direccion;
     y = rayo.getYFromX(x);
     i++;
-  } while (!hayPared((int)x + pared, (int)y);
-           largo = rayo.getLargoFromX(x);
-           return abs(largo);
+  } while (!hayPared((int)x + pared, (int)y));
+  largo = rayo.getLargoFromX(x);
+  return abs(largo);
 }
 
-float shoyRayY(rayo) {
+float shotRayY(Rayo rayo) {
   float largo = 0;
   float x = 0;
-  float y = rayo.pPosY;
+  float y = (int)rayo.pPosY;
   int i = 0;
   int direccion = rayo.dirY;
   int pared = (direccion < 0) ? -1 : 0;
@@ -156,9 +170,34 @@ float shoyRayY(rayo) {
     y += direccion;
     x = rayo.getXFromY(y);
     i++;
-  } while (!hayPared((int)x, (int)y + pared);
-           largo = rayo.getLargoFromY(y);
-           return abs(largo);
+  } while (!hayPared((int)x, (int)y + pared));
+  largo = rayo.getLargoFromY(y);
+  return abs(largo);
+}
+
+void pintarRayo(float largo, int x, int tx) {
+  int mitad = HEIGHT / 2;
+  int ty = 0;
+  float tamanioRayo = (mitad) / (VISIONH);
+  float tamanioPared = (int)abs(tamanioRayo * (atan(0.5 / largo) * RAD_TO_DEG));
+  int parteAlta = mitad - (int)tamanioPared;
+  if (parteAlta < 0) {
+    parteAlta = 0;
+  }
+  tamanioPared = 8 / tamanioPared;
+
+  for (int i = mitad, ti = 0; i > parteAlta; i--) {
+    ty = (int)(ti * tamanioPared);
+    if (getPiedra(tx, 7 - ty) || i == parteAlta + 1) {
+      u8g2.drawPixel(x, i);
+    }
+    if (getPiedra(tx, ty + 8)) {
+      u8g2.drawPixel(x, HEIGHT - i);
+    }
+    //      u8g2.drawPixel(x, i);
+    //      u8g2.drawPixel(x, HEIGHT - i);
+    ti++;
+  }
 }
 
 void render() {
@@ -169,10 +208,10 @@ void render() {
   Rayo rayo;
   rayo.pPosX = jugador.posX;
   rayo.pPosY = jugador.posY;
-  for (byte i = 0; i < WIDTH; i++) {
+  for (int i = 0; i < WIDTH; i++) {
     rayo.setAngulo(angulo);
-    largoX = shotRayX(angulo);
-    largoY = shotRayY(angulo);
+    largoX = shotRayX(rayo);
+    largoY = shotRayY(rayo);
     if (largoX < largoY) {
       largo = largoX;
       tx = (int)(rayo.getYFromLargo(largo) * 100) % 100;
@@ -181,26 +220,47 @@ void render() {
       tx = (int)(rayo.getXFromLargo(largo) * 100) % 100;
     }
     tx = 16 * tx / 100;
-    if (largo <= distanciaDeVision) {
-      largo = largo == 0 ? 0.1f : largo;
+    if (largo <= DISTANCIA) {
+      largo = (largo == 0) ? 0.1f : largo;
       pintarRayo(largo, i, tx);
     }
-    anguloHorizontal -= tamañorayos;
+    angulo -= tamanioRayos;
   }
 }
 
 void mover() {
-  byte mx = readjoy(PINX, VELOCIDADGIRO);
-  byte my = readjoy(PINX, VELOCIDAD);
+  int mx = readjoy(PINX, 20);
+  int my = readjoy(PINY, 5);
   byte mz = !digitalRead(PINZ);
   boolean actualizado = true;
 
   if (mx != 0) {
     actualizado = false;
+    float angulo = jugador.angulo - mx;
+    if (angulo >= 360) {
+      angulo -= 360;
+    } else if (angulo < 0) {
+      angulo += 360;
+    }
+    jugador.angulo = angulo;
+    u8g2.setCursor(0, 63);
+    u8g2.print(mx);
+    u8g2.print(" - ");
+    u8g2.print(analogRead(PINX));
   }
 
   if (my != 0) {
     actualizado = false;
+    Rayo rayo;
+    rayo.pPosX = jugador.posX;
+    rayo.pPosY = jugador.posY;
+    rayo.setAngulo(jugador.angulo - (VISION / 2));
+    jugador.posX = rayo.getXFromLargo(my * 0.05);
+    jugador.posY = rayo.getYFromLargo(my * 0.05);
+    if (hayPared((int)jugador.posX, (int)jugador.posY)) {
+      jugador.posX = rayo.pPosX;
+      jugador.posY = rayo.pPosY;
+    }
   }
 
   if (mz != 0) {
@@ -214,6 +274,7 @@ void mover() {
 
 void setup() {
   u8g2.begin();
+  u8g2.setFont(u8g2_font_5x7_tr);
   pinMode(PINX, INPUT);
   pinMode(PINY, INPUT);
   pinMode(PINZ, INPUT);
@@ -221,6 +282,8 @@ void setup() {
 
 void loop() {
   u8g2.clearBuffer();
+  mover();
+  render();
   u8g2.sendBuffer();
 
 }
