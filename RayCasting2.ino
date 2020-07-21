@@ -9,7 +9,7 @@
 #define VISIONH 70.0/4
 #define DISTANCIA 16
 #define HEIGHT 56
-#define WIDTH 32
+#define WIDTH 128
 #define VELOCIDAD 5
 #define VELOCIDADGIRO 20
 
@@ -35,7 +35,7 @@ int piedras[] = {
 
 int mapa2[] {0, 0, 0, 0, 0, 0, 0, 0};
 
-int mapa[] = {
+byte mapa[] = {
   0b11111111,
   0b10000001,
   0b11000111,
@@ -177,32 +177,25 @@ float shotRayY(Rayo rayo) {
 
 void pintarRayo(float largo, int x, int tx) {
   int mitad = HEIGHT / 2;
-  int ty = 0;
+  byte ty = 0;
   float tamanioRayo = (mitad) / (VISIONH);
-  float tamanioPared = (int)abs(tamanioRayo * (atan(0.5 / largo) * RAD_TO_DEG));
+  byte tamanioPared = (int)abs(tamanioRayo * (atan(0.5 / largo) * RAD_TO_DEG));
   int parteAlta = mitad - (int)tamanioPared;
   if (parteAlta < 0) {
     parteAlta = 0;
   }
-  tamanioPared = 8 / tamanioPared;
 
-  for (int i = mitad, ti = 0; i > parteAlta; i-=2) {
-    ty = (int)(ti * tamanioPared);
+  for (byte i = mitad, maxi = parteAlta, ti = 0; i > maxi; i--) {
+    ty = ti*8/tamanioPared;
     if (getPiedra(tx, 7 - ty) || i == parteAlta + 1) {
-      for(int j = x*4, maxi = x*4+4; j<maxi; j++){
-        u8g2.drawPixel(j, i);  
-        u8g2.drawPixel(j, i-1);
-      }
+        u8g2.drawPixel(x, i);  
     }
     if (getPiedra(tx, ty + 8)) {
-      for(int j = x*4, maxi = x*4+4; j<maxi; j++){
-        u8g2.drawPixel(j, HEIGHT - i);
-        u8g2.drawPixel(j, HEIGHT - i-1);
-      }
+        u8g2.drawPixel(x, HEIGHT - i);
     }
     //      u8g2.drawPixel(x, i);
     //      u8g2.drawPixel(x, HEIGHT - i);
-    ti+=2;
+    ti++;
   }
 }
 
