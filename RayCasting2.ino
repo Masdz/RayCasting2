@@ -7,9 +7,9 @@
 
 #define VISION 70.0
 #define VISIONH 70.0/4
-#define DISTANCIA 4
+#define DISTANCIA 16
 #define HEIGHT 56
-#define WIDTH 128
+#define WIDTH 32
 #define VELOCIDAD 5
 #define VELOCIDADGIRO 20
 
@@ -186,17 +186,23 @@ void pintarRayo(float largo, int x, int tx) {
   }
   tamanioPared = 8 / tamanioPared;
 
-  for (int i = mitad, ti = 0; i > parteAlta; i--) {
+  for (int i = mitad, ti = 0; i > parteAlta; i-=2) {
     ty = (int)(ti * tamanioPared);
     if (getPiedra(tx, 7 - ty) || i == parteAlta + 1) {
-      u8g2.drawPixel(x, i);
+      for(int j = x*4, maxi = x*4+4; j<maxi; j++){
+        u8g2.drawPixel(j, i);  
+        u8g2.drawPixel(j, i-1);
+      }
     }
     if (getPiedra(tx, ty + 8)) {
-      u8g2.drawPixel(x, HEIGHT - i);
+      for(int j = x*4, maxi = x*4+4; j<maxi; j++){
+        u8g2.drawPixel(j, HEIGHT - i);
+        u8g2.drawPixel(j, HEIGHT - i-1);
+      }
     }
     //      u8g2.drawPixel(x, i);
     //      u8g2.drawPixel(x, HEIGHT - i);
-    ti++;
+    ti+=2;
   }
 }
 
@@ -229,8 +235,8 @@ void render() {
 }
 
 void mover() {
-  int mx = readjoy(PINX, 20);
-  int my = readjoy(PINY, 5);
+  int mx = readjoy(PINX, VELOCIDADGIRO);
+  int my = readjoy(PINY, VELOCIDAD);
   byte mz = !digitalRead(PINZ);
   boolean actualizado = true;
 
@@ -281,9 +287,10 @@ void setup() {
 }
 
 void loop() {
-  u8g2.clearBuffer();
-  mover();
-  render();
-  u8g2.sendBuffer();
-
+  while(true){
+    u8g2.clearBuffer();
+    mover();
+    render();
+    u8g2.sendBuffer();
+  }
 }
