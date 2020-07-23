@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <U8g2lib.h>
 #include <Wire.h>
+#include <avr/pgmspace.h>
 #define PINY 14
 #define PINX 15
 #define PINZ 16
@@ -14,7 +15,19 @@
 #define VELOCIDADGIRO 25
 
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
-int piedras[] = {
+
+const byte mapa[] = {
+  0b00000000,
+  0b01010100,
+  0b00000000,
+  0b01010100,
+  0b00000000,
+  0b00111100,
+  0b00000000,
+  0b00000000
+};
+
+const int piedras[] = {
   0b0000100000010000,
   0b0001100000010000,
   0b0011100001111000,
@@ -35,7 +48,7 @@ int piedras[] = {
 
 int mapa2[] {0, 0, 0, 0, 0, 0, 0, 0};
 
-byte mapa3[] = {
+byte mapa3[]= {
   0b11111111,
   0b10000001,
   0b11000111,
@@ -46,20 +59,9 @@ byte mapa3[] = {
   0b11111111
 };
 
-byte mapa[] = {
-  0b00000000,
-  0b01010100,
-  0b00000000,
-  0b01010100,
-  0b00000000,
-  0b00111100,
-  0b00000000,
-  0b00000000
-};
-
 struct Player {
-  float posX = 4;
-  float posY = 4;
+  float posX = 1.5;
+  float posY = 1.5;
   int angulo = 180;
 };
 struct Pintable{
@@ -134,12 +136,15 @@ struct Rayo {
 };
 
 Player jugador;
+int imin = 512;
 
 boolean hayPared(int x, int y) {
   if (x > 7 || y > 7 || x < 0 || y < 0) {
     return true;
   }
-  return  ((mapa[7 - y] >> (7 - x)) & 1) == 1;
+  //byte fila = pgm_read_byte(mapa+(7-y));
+  byte fila = mapa[7-y];
+  return  ((fila >> (7 - x)) & 1) == 1;
 }
 
 boolean getPiedra(int x, int y) {
@@ -147,14 +152,6 @@ boolean getPiedra(int x, int y) {
     return false;
   }
   return  ((piedras[y] >> (15 - x)) & 1) == 0;
-}
-
-int readjoy(byte pin, int maximo) {
-  int input = analogRead(pin);
-  if (input > 490 && input < 520) {
-    input = 512;
-  }
-  return map(input, 0, 1023, -maximo, maximo);
 }
 
 Pintable shotRayX(Rayo &rayo) {
@@ -221,15 +218,17 @@ void pintarRayo(Pintable &pintable) {
   }
   for (byte i = mitad, maxi = parteAlta, ti = 0; i > maxi; i--) {
     ty = ti*8/tamanioPared;
-    if (i%2<luz && getPiedra(tx, 7 - ty) || i == parteAlta + 1) {
+    if (i%2<luz && getPiedra(tx, 7 - ty)) {
         for(int li = 0;li<luz&&li<4;li++){
           u8g2.drawPixel(x*4+li, i);  
         }
+        //u8g2.drawPixel(x, i);  
     }
     if (i%2<luz && getPiedra(tx, ty+8)) {
       for(int li = 0;li<luz&&li<4;li++){
         u8g2.drawPixel(x*4+li, HEIGHT - i);
       }
+      //u8g2.drawPixel(x, HEIGHT - i);
     }
     ti++;
   }
@@ -259,6 +258,14 @@ void render() {
   }
 }
 
+int readjoy(byte pin, int maximo) {
+  int input = analogRead(pin);
+  if (input > 470 && input < 520) {
+    input = 512;
+  }
+  return map(input, 0, 1023, -maximo, maximo);
+}
+
 void mover() {
   int mx = readjoy(PINX, VELOCIDADGIRO);
   int my = readjoy(PINY, VELOCIDAD);
@@ -274,10 +281,6 @@ void mover() {
       angulo += 360;
     }
     jugador.angulo = angulo;
-    u8g2.setCursor(0, 63);
-    u8g2.print(mx);
-    u8g2.print(" - ");
-    u8g2.print(analogRead(PINX));
   }
 
   if (my != 0) {
@@ -299,11 +302,19 @@ void mover() {
   }
 
   if (!actualizado) {
-
+    u8g2.clearBuffer();
+    render();
+    u8g2.setCursor(0, 63);
+    u8g2.print("X/Y: ");
+    u8g2.print(jugador.posX);
+    u8g2.print("/");
+    u8g2.print(jugador.posY);
+    u8g2.sendBuffer();
   }
 }
 
 void setup() {
+  u8g2.setBusClock(800000);
   u8g2.begin();
   u8g2.setFont(u8g2_font_5x7_tr);
   pinMode(PINX, INPUT);
@@ -313,9 +324,6 @@ void setup() {
 
 void loop() {
   while(true){
-    u8g2.clearBuffer();
     mover();
-    render();
-    u8g2.sendBuffer();
   }
 }
