@@ -5,13 +5,13 @@
 #define PINX 15
 #define PINZ 16
 
-#define VISION 70.0
+#define VISION 70
 #define VISIONH 70.0/4
-#define DISTANCIA 16
+#define DISTANCIA 5
 #define HEIGHT 56
-#define WIDTH 128
-#define VELOCIDAD 5
-#define VELOCIDADGIRO 20
+#define WIDTH 32
+#define VELOCIDAD 8
+#define VELOCIDADGIRO 25
 
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
 int piedras[] = {
@@ -35,7 +35,7 @@ int piedras[] = {
 
 int mapa2[] {0, 0, 0, 0, 0, 0, 0, 0};
 
-byte mapa[] = {
+byte mapa3[] = {
   0b11111111,
   0b10000001,
   0b11000111,
@@ -45,10 +45,32 @@ byte mapa[] = {
   0b10000001,
   0b11111111
 };
+
+byte mapa[] = {
+  0b00000000,
+  0b01010100,
+  0b00000000,
+  0b01010100,
+  0b00000000,
+  0b00111100,
+  0b00000000,
+  0b00000000
+};
+
 struct Player {
   float posX = 4;
   float posY = 4;
-  float angulo = 180;
+  int angulo = 180;
+};
+struct Pintable{
+  byte tx = 0;
+  byte x = 0;
+  byte pared = 0;
+  float largo = 0;
+  void setTx(float t){
+    t = (byte)(abs(t)*100)%100;
+    tx = 16 * t / 100;
+  }
 };
 struct Rayo {
   float pPosX;
@@ -135,7 +157,8 @@ int readjoy(byte pin, int maximo) {
   return map(input, 0, 1023, -maximo, maximo);
 }
 
-float shotRayX(Rayo rayo) {
+Pintable shotRayX(Rayo &rayo) {
+  Pintable pintable;
   float largo = 0;
   float x = (int)rayo.pPosX;
   float y = 0;
@@ -145,17 +168,21 @@ float shotRayX(Rayo rayo) {
   x -= pared;
   do {
     if (i > DISTANCIA) {
-      return 255;
+      pintable.largo = 255;
+      return pintable;
     }
     x += direccion;
     y = rayo.getYFromX(x);
     i++;
   } while (!hayPared((int)x + pared, (int)y));
-  largo = rayo.getLargoFromX(x);
-  return abs(largo);
+  pintable.setTx(y);
+  pintable.largo = abs(rayo.getLargoFromX(x));
+  pintable.pared = x;
+  return pintable;
 }
 
-float shotRayY(Rayo rayo) {
+Pintable shotRayY(Rayo &rayo) {
+  Pintable pintable;
   float largo = 0;
   float x = 0;
   float y = (int)rayo.pPosY;
@@ -165,65 +192,70 @@ float shotRayY(Rayo rayo) {
   y -= pared;
   do {
     if (i > DISTANCIA) {
-      return 255;
+      pintable.largo = 255;
+      return pintable;
     }
     y += direccion;
     x = rayo.getXFromY(y);
     i++;
   } while (!hayPared((int)x, (int)y + pared));
-  largo = rayo.getLargoFromY(y);
-  return abs(largo);
+  pintable.setTx(x);
+  pintable.largo = abs(rayo.getLargoFromY(y));
+  pintable.pared = y;
+  return pintable;
 }
 
-void pintarRayo(float largo, int x, int tx) {
+void pintarRayo(Pintable &pintable) {
+  if(pintable.largo>DISTANCIA){
+    return;
+  }
+  float largo = (pintable.largo == 0) ? 0.1f : pintable.largo;  
+  int luz = 6-((byte)(6*largo))/DISTANCIA;
   int mitad = HEIGHT / 2;
-  byte ty = 0;
+  byte ty = 0, tx = pintable.tx, x = pintable.x;
   float tamanioRayo = (mitad) / (VISIONH);
   byte tamanioPared = (int)abs(tamanioRayo * (atan(0.5 / largo) * RAD_TO_DEG));
   int parteAlta = mitad - (int)tamanioPared;
   if (parteAlta < 0) {
     parteAlta = 0;
   }
-
   for (byte i = mitad, maxi = parteAlta, ti = 0; i > maxi; i--) {
     ty = ti*8/tamanioPared;
-    if (getPiedra(tx, 7 - ty) || i == parteAlta + 1) {
-        u8g2.drawPixel(x, i);  
+    if (i%2<luz && getPiedra(tx, 7 - ty) || i == parteAlta + 1) {
+        for(int li = 0;li<luz&&li<4;li++){
+          u8g2.drawPixel(x*4+li, i);  
+        }
     }
-    if (getPiedra(tx, ty + 8)) {
-        u8g2.drawPixel(x, HEIGHT - i);
+    if (i%2<luz && getPiedra(tx, ty+8)) {
+      for(int li = 0;li<luz&&li<4;li++){
+        u8g2.drawPixel(x*4+li, HEIGHT - i);
+      }
     }
-    //      u8g2.drawPixel(x, i);
-    //      u8g2.drawPixel(x, HEIGHT - i);
     ti++;
   }
 }
 
+Pintable getMenor(Pintable p1, Pintable p2){
+  if(p1.largo < p2.largo){
+    return p1;
+  }else{
+    return p2;
+  }
+}
+
 void render() {
-  float tamanioRayos = VISION / WIDTH;
+  float tamanioRayo = VISION/(float)WIDTH;
   float angulo = jugador.angulo;
-  float largo, largoX, largoY;
-  int tx = 0;
+  Pintable pintable;
   Rayo rayo;
   rayo.pPosX = jugador.posX;
   rayo.pPosY = jugador.posY;
-  for (int i = 0; i < WIDTH; i++) {
+  for (byte i = 0; i < WIDTH; i++) {
     rayo.setAngulo(angulo);
-    largoX = shotRayX(rayo);
-    largoY = shotRayY(rayo);
-    if (largoX < largoY) {
-      largo = largoX;
-      tx = (int)(rayo.getYFromLargo(largo) * 100) % 100;
-    } else {
-      largo = largoY;
-      tx = (int)(rayo.getXFromLargo(largo) * 100) % 100;
-    }
-    tx = 16 * tx / 100;
-    if (largo <= DISTANCIA) {
-      largo = (largo == 0) ? 0.1f : largo;
-      pintarRayo(largo, i, tx);
-    }
-    angulo -= tamanioRayos;
+    pintable = getMenor(shotRayX(rayo),shotRayY(rayo));
+    pintable.x = i;
+    pintarRayo(pintable);
+    angulo -= tamanioRayo;
   }
 }
 
