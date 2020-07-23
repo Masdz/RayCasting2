@@ -8,9 +8,9 @@
 
 #define VISION 70
 #define VISIONH 70.0/4
-#define DISTANCIA 5
+#define DISTANCIA 8
 #define HEIGHT 56
-#define WIDTH 32
+#define WIDTH 128
 #define VELOCIDAD 8
 #define VELOCIDADGIRO 25
 
@@ -137,6 +137,8 @@ struct Rayo {
 
 Player jugador;
 int imin = 512;
+int aumentoVision = 0;
+int reduccionRes = 4;
 
 boolean hayPared(int x, int y) {
   if (x > 7 || y > 7 || x < 0 || y < 0) {
@@ -210,7 +212,7 @@ void pintarRayo(Pintable &pintable) {
   int luz = 6-((byte)(6*largo))/DISTANCIA;
   int mitad = HEIGHT / 2;
   byte ty = 0, tx = pintable.tx, x = pintable.x;
-  float tamanioRayo = (mitad) / (VISIONH);
+  float tamanioRayo = (mitad) / (VISIONH+aumentoVision/4);
   byte tamanioPared = (int)abs(tamanioRayo * (atan(0.5 / largo) * RAD_TO_DEG));
   int parteAlta = mitad - (int)tamanioPared;
   if (parteAlta < 0) {
@@ -218,17 +220,19 @@ void pintarRayo(Pintable &pintable) {
   }
   for (byte i = mitad, maxi = parteAlta, ti = 0; i > maxi; i--) {
     ty = ti*8/tamanioPared;
-    if (i%2<luz && getPiedra(tx, 7 - ty)) {
-        for(int li = 0;li<luz&&li<4;li++){
-          u8g2.drawPixel(x*4+li, i);  
+    if (i%4<luz && getPiedra(tx, 7 - ty)) {
+//      for(int li = 0;li<luz&&li<4;li++){
+        for(int li = 0;li<reduccionRes;li++){
+          u8g2.drawPixel(x*reduccionRes+li, i);  
         }
-        //u8g2.drawPixel(x, i);  
+//      u8g2.drawPixel(x, i);  
     }
-    if (i%2<luz && getPiedra(tx, ty+8)) {
-      for(int li = 0;li<luz&&li<4;li++){
-        u8g2.drawPixel(x*4+li, HEIGHT - i);
-      }
-      //u8g2.drawPixel(x, HEIGHT - i);
+    if (i%4<luz && getPiedra(tx, ty+8)) {
+//      for(int li = 0;li<luz&&li<4;li++){
+        for(int li = 0;li<reduccionRes;li++){
+          u8g2.drawPixel(x*reduccionRes+li, HEIGHT - i);
+        }
+//      u8g2.drawPixel(x, HEIGHT - i);
     }
     ti++;
   }
@@ -243,13 +247,13 @@ Pintable getMenor(Pintable p1, Pintable p2){
 }
 
 void render() {
-  float tamanioRayo = VISION/(float)WIDTH;
-  float angulo = jugador.angulo;
+  float tamanioRayo = (VISION+aumentoVision)/(float)(WIDTH/reduccionRes);
+  float angulo = jugador.angulo+aumentoVision/2;
   Pintable pintable;
   Rayo rayo;
   rayo.pPosX = jugador.posX;
   rayo.pPosY = jugador.posY;
-  for (byte i = 0; i < WIDTH; i++) {
+  for (byte i = 0, maxi = WIDTH/reduccionRes; i < maxi; i++) {
     rayo.setAngulo(angulo);
     pintable = getMenor(shotRayX(rayo),shotRayY(rayo));
     pintable.x = i;
@@ -272,6 +276,12 @@ void mover() {
   byte mz = !digitalRead(PINZ);
   boolean actualizado = true;
 
+  if (mz != 0) {
+
+  }else if(aumentoVision>0){
+
+  }
+  
   if (mx != 0) {
     actualizado = false;
     float angulo = jugador.angulo - mx;
@@ -296,12 +306,16 @@ void mover() {
       jugador.posY = rayo.pPosY;
     }
   }
-
-  if (mz != 0) {
-    actualizado = false;
+  
+  if(!actualizado && reduccionRes<5){
+    reduccionRes++;
+    aumentoVision = 10*reduccionRes;
+  }else if(reduccionRes>1){
+    reduccionRes--;
+    aumentoVision = 10*reduccionRes;
   }
 
-  if (!actualizado) {
+  if (!actualizado||true) {
     u8g2.clearBuffer();
     render();
     u8g2.setCursor(0, 63);
