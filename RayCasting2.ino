@@ -323,24 +323,14 @@ Pintable getMenor(Pintable p1, Pintable p2){
 }
 
 void render() {
-  float tamanioRayo = (VISION+aumentoVision)/(float)(WIDTH/reduccionRes);
-  float tamanioHRayo = (HEIGHT/2) / (VISIONH+aumentoVision/4);
-  float angulo = jugador.angulo+aumentoVision/2;
   Pintable pintable;
-  Rayo rayo;
-  rayo.pPosX = jugador.posX;
-  rayo.pPosY = jugador.posY;
-  for (byte i = 0, maxi = WIDTH/reduccionRes; i < maxi; i++) {
-    byte j = reduccionRes;
-    rayo.setAngulo(angulo);
-    pintable = getMenor(shotRayX(rayo),shotRayY(rayo));
-    if(pintable.largo<=DISTANCIA){
-      pintable.largo = (pintable.largo == 0) ? 0.1f : pintable.largo;  
-      pintable.x = i*reduccionRes;
-      pintable.alto = (int)abs(tamanioHRayo * (atan(0.5 / pintable.largo) * RAD_TO_DEG));
-      pintarRayo(pintable);  
-    }
-    angulo -= tamanioRayo;
+  while(!Serial.available()){}
+  for(byte i = 0; i < WIDTH; i++){
+    pintable.tx = Serial.read();
+    pintable.textura = Serial.read();
+    pintable.alto = Serial.read();
+    pintable.x = Serial.read();
+    pintarRayo(pintable);
   }
 }
 
@@ -359,8 +349,6 @@ void mover() {
   boolean actualizado = true;
 
   if (mz != 0) {
-
-  }else if(aumentoVision>0){
 
   }
   
@@ -408,6 +396,9 @@ void mover() {
     u8g2.clearBuffer();
     u8g2.setDrawColor(1);
     render();
+    Serial.print(jugador.posX);
+    Serial.print(jugador.posY);
+    Serial.print(jugador.angulo);
     u8g2.setBitmapMode(2);
     u8g2.setDrawColor(1);
     u8g2.drawXBMP(80+animPistola,30,rifle_width,rifle_height,rifle_bits);
@@ -437,10 +428,13 @@ void setup() {
   pinMode(PINX, INPUT);
   pinMode(PINY, INPUT);
   pinMode(PINZ, INPUT);
+  delay(5000);
+  Serial.begin(9600);
+  Serial.print(jugador.posX);
+  Serial.print(jugador.posY);
+  Serial.print(jugador.angulo);
 }
 
 void loop() {
-  while(true){
     mover();
-  }
 }
