@@ -23,9 +23,9 @@ struct Player {
 
 struct Pintable{
   byte tx = 0;
-  byte x = 0;
   byte textura = 0;
   byte alto = 0;
+  byte x = 0;
   
   void setTx(float t){
     t = (byte)(abs(t)*100)%100;
@@ -94,7 +94,9 @@ struct Rayo {
   }
 };
 
-float tamanioHRayo = (HEIGHT/2) / (VISIONH+aumentoVision/4);
+float tamanioHRayo = (HEIGHT/2) / (VISIONH/4);
+Player jugador;
+Pintable pintables[WIDTH];
 
 Pintable shotRayX(Rayo &rayo) {
   Pintable pintable;
@@ -107,7 +109,7 @@ Pintable shotRayX(Rayo &rayo) {
   x -= pared;
   do {
     if (i > DISTANCIA) {
-      pintable.largo = 255;
+      pintable.alto = 0;
       return pintable;
     }
     x += direccion;
@@ -115,6 +117,7 @@ Pintable shotRayX(Rayo &rayo) {
     i++;
   } while (!hayPared((int)x + pared, (int)y));
   largo = abs(rayo.getLargoFromX(x));
+  largo = largo==0?0.0001:largo;
   pintable.alto = (int)abs(tamanioHRayo * (atan(0.5 / largo) * RAD_TO_DEG));
   pintable.setTx(y);
   
@@ -132,16 +135,42 @@ Pintable shotRayY(Rayo &rayo) {
   y -= pared;
   do {
     if (i > DISTANCIA) {
-      pintable.largo = 255;
+      pintable.alto = 0;
       return pintable;
     }
     y += direccion;
     x = rayo.getXFromY(y);
     i++;
   } while (!hayPared((int)x, (int)y + pared));
+  largo = abs(rayo.getLargoFromY(y));
+  largo = largo==0?0.0001:largo;
+  pintable.alto = (int)abs(tamanioHRayo * (atan(0.5 / largo) * RAD_TO_DEG));
   pintable.setTx(x);
-  pintable.largo = abs(rayo.getLargoFromY(y));
   return pintable;
+}
+
+Pintable getMayor(Pintable p1, Pintable p2){
+  if(p1.alto > p2.alto){
+    return p1;
+  }else{
+    return p2;
+  }
+}
+
+void cast(){
+  float tamanioRayo = (VISION)/(float)(WIDTH);
+  float angulo = jugador.angulo/2;
+  Pintable pintable;
+  Rayo rayo;
+  rayo.pPosX = jugador.posX;
+  rayo.pPosY = jugador.posY;
+  for (byte i = 0, maxi = WIDTH; i < maxi; i++) {
+    rayo.setAngulo(angulo);
+    pintable = getMayor(shotRayX(rayo),shotRayY(rayo));
+    pintable.x = i;
+    pintables[i] = pintable;
+    angulo -= tamanioRayo;
+  }
 }
 
 boolean hayPared(int x, int y) {
@@ -154,10 +183,28 @@ boolean hayPared(int x, int y) {
 }
 
 void setup() {
-  
+  Serial.begin(9600);
 }
 
 
 void loop() {
-  
+  while(!Serial.available()){};
+  jugador.posX = Serial.parseFloat();
+  while(!Serial.available()){};
+  jugador.posY = Serial.parseFloat();
+  while(!Serial.available()){};
+  jugador.angulo = Serial.parseInt();
+  cast();
+  for(byte i = 0; i < WIDTH; i++){
+    Serial.write(pintables[i].tx);
+    Serial.write(pintables[i].textura);
+    Serial.write(pintables[i].alto);
+    Serial.write(pintables[i].x);
+    //Serial.print(pintables[i].tx);
+    //Serial.print(' ');
+    //Serial.print(pintables[i].textura);
+    //Serial.print(' ');
+    //Serial.print(pintables[i].alto);
+    //Serial.println("");
+  }
 }
