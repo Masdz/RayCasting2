@@ -188,23 +188,23 @@ void setup() {
 
 
 void loop() {
-  while(!Serial.available()){};
+  while(Serial.available()<5){}
   jugador.posX = Serial.parseFloat();
-  while(!Serial.available()){};
   jugador.posY = Serial.parseFloat();
-  while(!Serial.available()){};
   jugador.angulo = Serial.parseInt();
   cast();
   for(byte i = 0; i < WIDTH; i++){
-    Serial.write(pintables[i].tx);
-    Serial.write(pintables[i].textura);
-    Serial.write(pintables[i].alto);
-    Serial.write(pintables[i].x);
-    //Serial.print(pintables[i].tx);
-    //Serial.print(' ');
-    //Serial.print(pintables[i].textura);
-    //Serial.print(' ');
-    //Serial.print(pintables[i].alto);
-    //Serial.println("");
+    //Serial.write(pintables[i].tx);
+    //Serial.write(pintables[i].textura);
+    //Serial.write(pintables[i].alto);
+    //Serial.write(pintables[i].x);
+    Serial.print(pintables[i].tx);
+    Serial.print(' ');
+    Serial.print(pintables[i].textura);
+    Serial.print(' ');
+    Serial.print(pintables[i].alto);
+    Serial.print(' ');
+    Serial.print(pintables[i].x);
+    Serial.println("");
   }
 }

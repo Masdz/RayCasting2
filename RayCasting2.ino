@@ -326,10 +326,10 @@ void render() {
   Pintable pintable;
   while(!Serial.available()){}
   for(byte i = 0; i < WIDTH; i++){
-    pintable.tx = Serial.read();
-    pintable.textura = Serial.read();
-    pintable.alto = Serial.read();
-    pintable.x = Serial.read();
+    pintable.tx = Serial.parseInt();
+    pintable.textura = Serial.parseInt();
+    pintable.alto = Serial.parseInt();
+    pintable.x = Serial.parseInt();
     pintarRayo(pintable);
   }
 }
@@ -428,11 +428,12 @@ void setup() {
   pinMode(PINX, INPUT);
   pinMode(PINY, INPUT);
   pinMode(PINZ, INPUT);
-  delay(5000);
+  delay(3000);
   Serial.begin(9600);
   Serial.print(jugador.posX);
   Serial.print(jugador.posY);
   Serial.print(jugador.angulo);
+  delay(3000);
 }
 
 void loop() {
