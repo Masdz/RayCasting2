@@ -8,7 +8,7 @@
 
 #define VISION 70
 #define VISIONH 70.0/4
-#define DISTANCIA 8
+#define DISTANCIA 5
 #define HEIGHT 56
 #define WIDTH 128
 #define VELOCIDAD 8
@@ -295,11 +295,6 @@ Pintable shotRayY(Rayo &rayo) {
 }
 
 void pintarRayo(Pintable &pintable) {
-  if(pintable.largo>DISTANCIA){
-    return;
-  }
-  float largo = (pintable.largo == 0) ? 0.1f : pintable.largo;  
-  int luz = 6-((byte)(6*largo))/DISTANCIA;
   int mitad = HEIGHT / 2;
   byte ty = 0, tx = pintable.tx, x = pintable.x;
   byte tamanioPared = pintable.alto;
@@ -319,6 +314,19 @@ void pintarRayo(Pintable &pintable) {
   }
 }
 
+void pintarRayo2(Pintable &pintable) {
+  int mitad = HEIGHT / 2;
+  byte x = pintable.x;
+  byte tamanioPared = pintable.alto;
+  int parteAlta = mitad - (int)tamanioPared;
+  if (parteAlta < 0) {
+    parteAlta = 0;
+  }
+  for (byte i = parteAlta,maxi = HEIGHT-i; i < maxi; i++) {
+      u8g2.drawPixel(x, i);
+  }
+}
+
 Pintable getMenor(Pintable p1, Pintable p2){
   if(p1.largo < p2.largo){
     return p1;
@@ -335,13 +343,15 @@ void render() {
   Rayo rayo;
   rayo.pPosX = jugador.posX;
   rayo.pPosY = jugador.posY;
-  for (byte i = 0, maxi = WIDTH/reduccionRes; i < maxi; i++) {
+  for (byte i = 0, maxi = i+WIDTH/reduccionRes; i < maxi; i++) {
     byte j = reduccionRes;
     rayo.setAngulo(angulo);
     pintable = getMenor(shotRayX(rayo),shotRayY(rayo));
-    pintable.x = i*reduccionRes;
-    pintable.alto = (int)abs(tamanioHRayo * (atan(0.5 / pintable.largo) * RAD_TO_DEG));
-    pintarRayo(pintable);  
+    if(pintable.largo<=DISTANCIA){
+      pintable.x = i*reduccionRes;
+      pintable.alto = (int)abs(tamanioHRayo * (atan(0.5 / pintable.largo) * RAD_TO_DEG));
+      pintarRayo(pintable);  
+    }
     angulo -= tamanioRayo;
   }
 }
@@ -398,7 +408,7 @@ void mover() {
     }
   }
   
-  if(!actualizado && reduccionRes<3){
+  if(!actualizado && reduccionRes<4){
     reduccionRes++;
     aumentoVision = 5*(reduccionRes-1);
   }else if(actualizado && reduccionRes>1){
