@@ -322,16 +322,32 @@ Pintable getMenor(Pintable p1, Pintable p2){
   }
 }
 
+void cast(){
+  String send = "j ";
+  send +=jugador.posX;
+  send +=" ";
+  send += jugador.posY;
+  send +=" ";
+  send +=jugador.angulo;
+  Serial.println(send);
+}
+
 void render() {
+  digitalWrite(13, HIGH);
+  String send = "";
   Pintable pintable;
-  while(!Serial.available()){}
   for(byte i = 0; i < WIDTH; i++){
+    send = "p ";
+    send += i;
+    Serial.println(send);
+    while(Serial.available()<5){}
     pintable.tx = Serial.parseInt();
     pintable.textura = Serial.parseInt();
     pintable.alto = Serial.parseInt();
-    pintable.x = Serial.parseInt();
+    pintable.x = i;
     pintarRayo(pintable);
   }
+  digitalWrite(13, LOW);
 }
 
 int readjoy(byte pin, int maximo) {
@@ -396,9 +412,7 @@ void mover() {
     u8g2.clearBuffer();
     u8g2.setDrawColor(1);
     render();
-    Serial.print(jugador.posX);
-    Serial.print(jugador.posY);
-    Serial.print(jugador.angulo);
+    cast();
     u8g2.setBitmapMode(2);
     u8g2.setDrawColor(1);
     u8g2.drawXBMP(80+animPistola,30,rifle_width,rifle_height,rifle_bits);
@@ -422,18 +436,29 @@ void mover() {
 }
 
 void setup() {
+  pinMode(13, OUTPUT);
   u8g2.setBusClock(800000);
-  u8g2.begin();
+  Serial.begin(9600);
   u8g2.setFont(u8g2_font_5x7_tr);
   pinMode(PINX, INPUT);
   pinMode(PINY, INPUT);
   pinMode(PINZ, INPUT);
-  delay(3000);
-  Serial.begin(9600);
-  Serial.print(jugador.posX);
-  Serial.print(jugador.posY);
-  Serial.print(jugador.angulo);
-  delay(3000);
+  cast();
+  digitalWrite(13, HIGH);
+  delay(5000);
+  digitalWrite(13, LOW);
+  delay(1000);
+  digitalWrite(13, HIGH);
+  delay(1000);
+  digitalWrite(13, LOW);
+  delay(1000);
+  digitalWrite(13, HIGH);
+  delay(1000);
+  digitalWrite(13, LOW);
+  delay(1000);
+  digitalWrite(13, HIGH);
+  delay(1000);
+  digitalWrite(13, LOW);
 }
 
 void loop() {

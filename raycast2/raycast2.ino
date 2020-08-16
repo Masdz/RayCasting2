@@ -158,6 +158,7 @@ Pintable getMayor(Pintable p1, Pintable p2){
 }
 
 void cast(){
+  digitalWrite(13, HIGH);
   float tamanioRayo = (VISION)/(float)(WIDTH);
   float angulo = jugador.angulo/2;
   Pintable pintable;
@@ -171,6 +172,7 @@ void cast(){
     pintables[i] = pintable;
     angulo -= tamanioRayo;
   }
+  digitalWrite(13, LOW);
 }
 
 boolean hayPared(int x, int y) {
@@ -182,29 +184,46 @@ boolean hayPared(int x, int y) {
   return  ((fila >> (7 - x)) & 1) == 1;
 }
 
-void setup() {
-  Serial.begin(9600);
+void enviarPintable(byte p){
+  Pintable pintable = pintables[p];
+  String send="";
+  send+=pintable.tx;
+  send+=" ";
+  send+=pintable.textura;
+  send+=" ";
+  send+=pintable.alto;
+  Serial.println(send);
 }
 
-
-void loop() {
+void leerJugador(){
   while(Serial.available()<5){}
   jugador.posX = Serial.parseFloat();
   jugador.posY = Serial.parseFloat();
   jugador.angulo = Serial.parseInt();
-  cast();
-  for(byte i = 0; i < WIDTH; i++){
-    //Serial.write(pintables[i].tx);
-    //Serial.write(pintables[i].textura);
-    //Serial.write(pintables[i].alto);
-    //Serial.write(pintables[i].x);
-    Serial.print(pintables[i].tx);
-    Serial.print(' ');
-    Serial.print(pintables[i].textura);
-    Serial.print(' ');
-    Serial.print(pintables[i].alto);
-    Serial.print(' ');
-    Serial.print(pintables[i].x);
-    Serial.println("");
+}
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(13, OUTPUT);
+}
+
+
+void loop() {
+  while(Serial.available()<1){}
+  char opc = Serial.read();
+  byte x;
+  switch(opc){
+    case 'j':
+      leerJugador();
+      cast();
+      break;
+    case 'p':
+      while(Serial.available()<2){}
+      x=Serial.parseInt();
+      enviarPintable(x);
+      break;
+    default:
+    break;
   }
+  
 }
