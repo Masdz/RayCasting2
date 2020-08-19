@@ -7,10 +7,10 @@
 #define PINZ 16
 
 #define VISION 70
-#define VISIONH 70.0/4
+#define VISIONH 17
 #define DISTANCIA 5
 #define HEIGHT 56
-#define WIDTH 128
+#define WIDTH 32
 #define VELOCIDAD 8
 #define VELOCIDADGIRO 25
 
@@ -155,6 +155,7 @@ struct Pintable{
   byte x = 0;
   byte textura = 0;
   byte alto = 0;
+  byte luz = 0;
   float largo = 0;
   
   void setTx(float t){
@@ -225,8 +226,6 @@ struct Rayo {
 
 Player jugador;
 int imin = 512;
-int aumentoVision = 0;
-int reduccionRes = 4;
 int animPistola = 4;
 int anim = 1;
 
@@ -305,10 +304,30 @@ void pintarRayo(Pintable &pintable) {
   for (byte i = mitad, maxi = parteAlta, ti = 0; i > maxi; i--) {
     ty = ti*8/tamanioPared;
     if (getTextura(pintable.textura,tx, 7 - ty)) {
+      switch(pintable.luz){
+        case 5:
+        case 4:
+          u8g2.drawPixel(x+3, i);
+        case 3:
+          u8g2.drawPixel(x+2, i);
+        case 2:
+          u8g2.drawPixel(x+1, i);
+        case 1:
           u8g2.drawPixel(x, i);
+      }
     }
-    if (getTextura(pintable.textura,tx, ty+8)) {
+    if (getTextura(pintable.textura,tx, ty+8)) {    
+      switch(pintable.luz){
+        case 5:
+        case 4:
+          u8g2.drawPixel(x+3, HEIGHT - i);
+        case 3:
+          u8g2.drawPixel(x+2, HEIGHT - i);
+        case 2:
+          u8g2.drawPixel(x+1, HEIGHT - i);
+        case 1:
           u8g2.drawPixel(x, HEIGHT - i);
+      }
     }
     ti++;
   }
@@ -335,22 +354,53 @@ Pintable getMenor(Pintable p1, Pintable p2){
   }
 }
 
-void render() {
-  float tamanioRayo = (VISION+aumentoVision)/(float)(WIDTH/reduccionRes);
-  float tamanioHRayo = (HEIGHT/2) / (VISIONH+aumentoVision/4);
-  float angulo = jugador.angulo+aumentoVision/2;
+void render2(){
+  float tamanioRayo = (VISION)/(float)(WIDTH);
+  float tamanioHRayo = (HEIGHT/2) / ((float)VISIONH);
+  float angulo = jugador.angulo;
+  byte antTx, actTx;
   Pintable pintable;
   Rayo rayo;
   rayo.pPosX = jugador.posX;
   rayo.pPosY = jugador.posY;
-  for (byte i = 0, maxi = i+WIDTH/reduccionRes; i < maxi; i++) {
-    byte j = reduccionRes;
+  rayo.setAngulo(angulo);
+  pintable = getMenor(shotRayX(rayo),shotRayY(rayo));
+  antTx = pintable.tx;
+  for(byte i = 1; i<WIDTH; i++){
+    angulo-=tamanioRayo;
     rayo.setAngulo(angulo);
     pintable = getMenor(shotRayX(rayo),shotRayY(rayo));
     if(pintable.largo<=DISTANCIA){
-      pintable.x = i*reduccionRes;
+      actTx = pintable.tx;
+      pintable.x = i*4;
+      pintable.luz = 4-((int)(pintable.largo*4)/DISTANCIA);
       pintable.alto = (int)abs(tamanioHRayo * (atan(0.5 / pintable.largo) * RAD_TO_DEG));
-      pintarRayo(pintable);  
+      for(byte j = pintable.luz; j>0; j--){
+        pintarRayo(pintable);
+        pintable.x--;
+        pintable.tx = map(j,0,4,antTx,actTx);
+      }
+      antTx = actTx;
+    }
+  }
+}
+
+void render() {
+  float tamanioRayo = (VISION)/(float)(WIDTH);
+  float tamanioHRayo = (HEIGHT/2) / ((float)VISIONH);
+  float angulo = jugador.angulo;
+  Pintable pintable;
+  Rayo rayo;
+  rayo.pPosX = jugador.posX;
+  rayo.pPosY = jugador.posY;
+  for (byte i = 0, maxi = WIDTH; i < maxi; i++) {
+    rayo.setAngulo(angulo);
+    pintable = getMenor(shotRayX(rayo),shotRayY(rayo));
+    if(pintable.largo<=DISTANCIA){
+      pintable.x = i*4;
+      pintable.luz = 5-((int)(pintable.largo*5)/DISTANCIA);
+      pintable.alto = (int)abs(tamanioHRayo * (atan(0.5 / pintable.largo) * RAD_TO_DEG));
+      pintarRayo(pintable);
     }
     angulo -= tamanioRayo;
   }
@@ -371,8 +421,6 @@ void mover() {
   boolean actualizado = true;
 
   if (mz != 0) {
-
-  }else if(aumentoVision>0){
 
   }
   
@@ -406,14 +454,6 @@ void mover() {
       }
       animPistola+=anim;
     }
-  }
-  
-  if(!actualizado && reduccionRes<4){
-    reduccionRes++;
-    aumentoVision = 5*(reduccionRes-1);
-  }else if(actualizado && reduccionRes>1){
-    reduccionRes--;
-    aumentoVision = 5*(reduccionRes-1);
   }
 
   if (!actualizado||true) {
